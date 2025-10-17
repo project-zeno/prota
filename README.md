@@ -1,3 +1,11 @@
+# Project Overview
+
+This project is an [Expo](https://expo.dev) React Native app with a native Android accessibility service. It provides AI-powered chat assistance on Android devices using Gemini/OpenAI suggestions, triggered from popular chat apps (WhatsApp, etc.).
+
+All implementation steps—app structure, native service integration, architecture rationale, and future work—are carefully documented in [`prota/accessibility.plan.md`](./accessibility.plan.md). **If you are building or updating native/AI/chat functionality, read that plan file first.**
+
+---
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
