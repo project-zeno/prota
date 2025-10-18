@@ -8,12 +8,14 @@ import {
   Alert,
   Platform,
   StatusBar,
+  NativeModules,
 } from "react-native";
 
+// Import the native bridge module
+const { AccessibilityBridge } = NativeModules;
+
 export default function Index() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isNotificationEnabled, setIsNotificationEnabled] = useState(false);
 
   useEffect(() => {
@@ -21,44 +23,54 @@ export default function Index() {
   }, []);
 
   const checkPermissions = async () => {
-    // TODO: Check accessibility and notification permissions via native bridge
-    // Will update setIsAccessibilityEnabled and setIsNotificationEnabled
-    console.log("Checking permissions...");
-    // Temporary mock values for testing UI
-    // setIsAccessibilityEnabled(false);
-    // setIsNotificationEnabled(false);
+    try {
+      // Check accessibility service status
+      const accessibilityEnabled = await AccessibilityBridge.isServiceEnabled();
+      setIsAccessibilityEnabled(accessibilityEnabled);
+
+      // Check notification permission
+      const notificationEnabled = await AccessibilityBridge.checkNotificationPermission();
+      setIsNotificationEnabled(notificationEnabled);
+
+      console.log("Permissions checked:", {
+        accessibility: accessibilityEnabled,
+        notification: notificationEnabled,
+      });
+    } catch (error) {
+      console.error("Error checking permissions:", error);
+    }
   };
 
-  const openAccessibilitySettings = () => {
-    // TODO: Call native bridge to open accessibility settings
-    Alert.alert(
-      "Accessibility Settings",
-      "This will open your device's Accessibility Settings. Enable 'Chat Assist' service."
-    );
-    console.log("Opening accessibility settings...");
+  const openAccessibilitySettings = async () => {
+    try {
+      await AccessibilityBridge.openAccessibilitySettings();
+      console.log("Opened accessibility settings");
+      
+      // Recheck after user returns (they might have enabled it)
+      setTimeout(() => {
+        checkPermissions();
+      }, 2000);
+    } catch (error) {
+      console.error("Error opening settings:", error);
+      Alert.alert("Error", "Failed to open accessibility settings");
+    }
   };
 
-  const requestNotificationPermission = () => {
-    // TODO: Call native bridge to request notification permission
-    Alert.alert(
-      "Notification Permission",
-      "Notification permission is required to show chat suggestions."
-    );
-    console.log("Requesting notification permission...");
+  const requestNotificationPermission = async () => {
+    try {
+      await AccessibilityBridge.openNotificationSettings();
+      console.log("Opened notification settings");
+      
+      // Recheck after user returns
+      setTimeout(() => {
+        checkPermissions();
+      }, 2000);
+    } catch (error) {
+      console.error("Error opening notification settings:", error);
+      Alert.alert("Error", "Failed to open notification settings");
+    }
   };
 
-  const testNotification = () => {
-    // TODO: Call native bridge to test notification
-    Alert.alert("Test", "Sending test notification...");
-    console.log("Testing notification...");
-  };
-
-  const analyzeChat = async () => {
-    // TODO: Call native bridge to analyze current WhatsApp chat
-    Alert.alert("Analyzing", "Reading messages and getting AI suggestions...");
-    console.log("Analyzing chat...");
-    // Will call: NativeModules.AccessibilityBridge.triggerAnalysis()
-  };
 
   return (
     <View style={styles.container}>
@@ -132,35 +144,28 @@ export default function Index() {
           </View>
         </View>
 
-        {/* Main Action */}
+        {/* How to Use */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Action</Text>
+          <Text style={styles.sectionTitle}>How to Use</Text>
           <View style={styles.card}>
-            <TouchableOpacity
-              style={[styles.primaryButton, styles.analyzeButton]}
-              onPress={analyzeChat}
-            >
-              <Text style={styles.analyzeButtonText}>
-                💬 Analyze Current Chat
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.helperText}>
-              Open WhatsApp chat first, then tap this button to get AI-powered
-              reply suggestions
+            <Text style={styles.instructionText}>
+              1️⃣ Enable accessibility service above
             </Text>
-          </View>
-        </View>
-
-        {/* Service Control */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service Control</Text>
-          <View style={styles.card}>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={testNotification}
-            >
-              <Text style={styles.secondaryButtonText}>Test Notification</Text>
-            </TouchableOpacity>
+            <Text style={styles.instructionText}>
+              2️⃣ Open WhatsApp and read a chat
+            </Text>
+            <Text style={styles.instructionText}>
+              3️⃣ Swipe down notification shade
+            </Text>
+            <Text style={styles.instructionText}>
+              4️⃣ Tap &ldquo;📊 Analyze Chat Now&rdquo; button
+            </Text>
+            <Text style={styles.instructionText}>
+              5️⃣ Get 3 AI suggestions in notification
+            </Text>
+            <Text style={styles.instructionText}>
+              6️⃣ Tap a &ldquo;Copy&rdquo; button and paste in chat!
+            </Text>
           </View>
         </View>
 
@@ -168,16 +173,17 @@ export default function Index() {
         <View style={styles.section}>
           <View style={styles.infoCard}>
             <Text style={styles.infoText}>
-              💡 Tap &ldquo;Analyze Current Chat&rdquo; while in WhatsApp to get AI-powered
-              reply suggestions instantly.
+              💡 When accessibility is enabled, you&apos;ll see a persistent
+              notification with an &ldquo;Analyze Chat Now&rdquo; button. Use it while in
+              WhatsApp to get instant AI suggestions!
             </Text>
             <Text style={styles.infoText}>
               🚀 Demo app for AI Native OS project. Uses Gemini API for fast
               suggestions.
             </Text>
             <Text style={styles.infoText}>
-              ⚠️ Requires accessibility permission to read visible messages.
-              Enable it in the Permissions section above.
+              ⚠️ No background monitoring - analysis only happens when you tap
+              the button. Your privacy is protected.
             </Text>
           </View>
         </View>
@@ -324,5 +330,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#888",
     lineHeight: 20,
+  },
+  instructionText: {
+    fontSize: 15,
+    color: "#ccc",
+    marginBottom: 10,
+    lineHeight: 22,
   },
 });

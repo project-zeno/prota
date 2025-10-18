@@ -5,6 +5,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.aaryannaidu.prota.notification.NotificationHelper
 
 class ChatAssistAccessibilityService : AccessibilityService() {
 
@@ -24,9 +25,9 @@ class ChatAssistAccessibilityService : AccessibilityService() {
 
         // Configure the service
         val info = AccessibilityServiceInfo().apply {
-            // Event types we're interested in (minimal for manual trigger)
-            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or 
-                        AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+            // Event types: We only care about window changes since analysis is manual
+            // Reduced to just WINDOW_STATE_CHANGED to minimize event processing
+            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
             
             // Package names to observe (WhatsApp only)
             packageNames = arrayOf("com.whatsapp")
@@ -38,11 +39,17 @@ class ChatAssistAccessibilityService : AccessibilityService() {
             flags = AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
                    AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
             
-            // Notification timeout
-            notificationTimeout = 100
+            // Notification timeout (increased to reduce frequency)
+            // Since we only do manual analysis, we don't need frequent events
+            notificationTimeout = 500
         }
         
         setServiceInfo(info)
+        
+        // Show persistent control notification
+        val notificationHelper = NotificationHelper(this)
+        notificationHelper.showControlNotification()
+        Log.d(TAG, "Control notification shown")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -58,54 +65,12 @@ class ChatAssistAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         instance = null
-        Log.d(TAG, "Accessibility Service Destroyed")
-    }
-
-    /**
-     * Main method to read current screen content
-     * Returns visible text from the current screen (WhatsApp chat)
-     */
-    fun readCurrentScreen(): String {
-        val rootNode = rootInActiveWindow
-        if (rootNode == null) {
-            Log.e(TAG, "Unable to get root window")
-            return ""
-        }
-
-        val messages = StringBuilder()
-        extractTextFromNode(rootNode, messages)
-        rootNode.recycle()
-
-        val result = messages.toString().trim()
-        Log.d(TAG, "Extracted text length: ${result.length}")
         
-        return result
-    }
-
-    /**
-     * Recursively extract text from accessibility node tree
-     */
-    private fun extractTextFromNode(node: AccessibilityNodeInfo, output: StringBuilder) {
-        // Get text from current node
-        val text = node.text
-        if (!text.isNullOrEmpty()) {
-            output.append(text).append("\n")
-        }
-
-        // Get content description (some elements use this instead of text)
-        val contentDescription = node.contentDescription
-        if (!contentDescription.isNullOrEmpty() && contentDescription != text) {
-            output.append(contentDescription).append("\n")
-        }
-
-        // Recursively process children
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
-            if (child != null) {
-                extractTextFromNode(child, output)
-                child.recycle()
-            }
-        }
+        // Dismiss control notification when service is disabled
+        val notificationHelper = NotificationHelper(this)
+        notificationHelper.dismissControlNotification()
+        
+        Log.d(TAG, "Accessibility Service Destroyed")
     }
 
     /**
@@ -135,9 +100,7 @@ class ChatAssistAccessibilityService : AccessibilityService() {
      * WhatsApp chat messages typically have certain view IDs or patterns
      */
     private fun extractChatMessages(node: AccessibilityNodeInfo, messages: MutableList<String>) {
-        // Check if this node looks like a message
-        // This is heuristic-based and may need adjustment
-        val viewId = node.viewIdResourceName
+        // Check if this node looks like a message (heuristic-based)
         val text = node.text?.toString()
 
         // WhatsApp message bubbles often have specific view IDs
