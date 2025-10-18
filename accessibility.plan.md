@@ -44,21 +44,21 @@
 
 **Only 4 files needed:**
 
-1. **`ChatAssistAccessibilityService.kt`** (100 lines max)
+1. **`ChatAssistAccessibilityService.kt`**
    - Extends `AccessibilityService`
    - Just needs one method: `readCurrentScreen()` - extracts visible text
    - No event listening, no tracking, no caching
 
-2. **`LlmApiClient.kt`** (80 lines max)
+2. **`LlmApiClient.kt`** 
    - One method: `getSuggestions(messages: String)` 
    - Uses OkHttp to call Gemini API
    - Hardcoded API key
 
-3. **`NotificationHelper.kt`** (50 lines max)
+3. **`NotificationHelper.kt`** 
    - One method: `showSuggestions(suggestions: List<String>)`
    - Creates notification with 3 action buttons (copy suggestion 1, 2, 3)
 
-4. **`AccessibilityBridgeModule.kt`** (60 lines max)
+4. **`AccessibilityBridgeModule.kt`** 
    - `triggerAnalysis()` - Button press → read screen → get AI → show notification
    - `isServiceEnabled()` - Check if accessibility is on
    - `openAccessibilitySettings()` - Open settings page
