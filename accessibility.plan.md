@@ -1,18 +1,31 @@
 <!-- 9a1668b6-5c55-4460-bc83-4ae3ba6403c0 2d7a6b1e-e199-4159-87b8-e44c128b29ee -->
 # Accessibility Chat Assist (Android + Expo)
 
-## Approach
+## Approach (SIMPLIFIED FOR MVP)
 
-- Use Android AccessibilityService to observe WhatsApp chat screens, extract visible messages, and detect the active conversation.
-- Send recent chat context to a cloud LLM API; return 2-3 suggestions + action hints.
-- MVP surface: Android notification with quick actions (fastest to ship, robust, no overlay permission).
-- Phase 2: Optional floating overlay bubble/chip using `TYPE_APPLICATION_OVERLAY`.
+**The entire flow in 4 steps:**
+
+```
+1. User chatting in WhatsApp
+2. User taps "Analyze Chat" button in your app
+3. App reads visible messages → Sends to Gemini API → Gets 3 suggestions
+4. Notification pops up with suggestions → Tap to copy → Paste in WhatsApp
+```
+
+**That's it!** 
+- No automatic detection
+- No conversation tracking  
+- No debouncing
+- No background monitoring
+- Just: Button → Read → AI → Notification
 
 ## Key Decisions
 
-- Suggestions generation: Cloud API (e.g., OpenAI/Gemini) called directly from Android native code.
-- First surface: Notifications with action buttons (copy, speak, open WhatsApp with prefilled text intent).
-- Target app to start: WhatsApp; architect selectors to be data-driven for other apps later.
+- **Manual trigger only**: No automatic detection - user taps button when they want suggestions
+- **Single-shot analysis**: Read screen → API call → Show notification (no tracking/caching)
+- **Gemini API**: Fast, cheap, good quality (recommended over OpenAI for this use case)
+- **Copy to clipboard**: Simplest action - user taps notification to copy suggestion
+- **WhatsApp only**: Focus on one app first, expand later if needed
 
 ## Implementation Steps
 
@@ -27,85 +40,56 @@
   - Run: `npx expo prebuild -p android`
 - Note: API key is hardcoded in native Android code (developer's own key)
 
-### 2) Android native module (Accessibility)
+### 2) Android native module (Accessibility) - SIMPLIFIED
 
-- Files to add under `android/app/src/main/java/.../accessibility/`:
-  - `ChatAssistAccessibilityService.kt`: extends `AccessibilityService`
-    - Listen for `TYPE_WINDOW_CONTENT_CHANGED`, `TYPE_WINDOW_STATE_CHANGED`
-    - Filter for `packageName == com.whatsapp`
-    - Parse view hierarchy for message list (use role/class names, content descriptions, text aggregation)
-    - Debounce, build recent chat transcript (last ~8-12 messages, role-tagged)
-    - Post work to `SuggestionWorker` (WorkManager) or a foreground service
-  - `SuggestionWorker.kt` (or `SuggestionService.kt`):
-    - Receive chat context payload
-    - Call Gemini/OpenAI API directly (HTTP POST)
-    - Cache recent suggestions keyed by conversation
-  - `NotificationHelper.kt`:
-    - Build channel and show heads-up notification with suggestions as action buttons
-    - Actions: Copy to clipboard, TTS speak, `ACTION_SENDTO`/deep-link back to WhatsApp with text
-  - `ClipboardUtils.kt`, `TtsUtils.kt`, `IntentUtils.kt`
-- Manifest updates in `android/app/src/main/AndroidManifest.xml`:
-  - `<service android:name=.accessibility.ChatAssistAccessibilityService ... android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">`
-    - Add `<intent-filter><action android:name="android.accessibilityservice.AccessibilityService"/></intent-filter>`
-    - Provide `res/xml/accessibility_service_config.xml` with event types, feedback type, target packages (WhatsApp), flags
-  - Permissions: `BIND_ACCESSIBILITY_SERVICE`, `POST_NOTIFICATIONS`, `FOREGROUND_SERVICE` (if needed)
-- Resources:
-  - `res/xml/accessibility_service_config.xml`
-  - `res/values/strings.xml` entries for service labels
+**Only 4 files needed:**
 
-### 3) RN ↔ native bridge
+1. **`ChatAssistAccessibilityService.kt`** (100 lines max)
+   - Extends `AccessibilityService`
+   - Just needs one method: `readCurrentScreen()` - extracts visible text
+   - No event listening, no tracking, no caching
 
-- Create `AccessibilityBridgeModule.kt` exposing:
-  - `isServiceEnabled()` - Check if accessibility service is active
-  - `openAccessibilitySettings()` - Open system accessibility settings
-  - `requestNotificationPermission()` - Request notification permission
-  - `testNotification()` - Send test notification with sample suggestions
-  - `checkPermissions()` - Return status of all required permissions
-- Register module/package; call from `prota` UI
+2. **`LlmApiClient.kt`** (80 lines max)
+   - One method: `getSuggestions(messages: String)` 
+   - Uses OkHttp to call Gemini API
+   - Hardcoded API key
 
-### 4) Direct API integration (Gemini/OpenAI)
+3. **`NotificationHelper.kt`** (50 lines max)
+   - One method: `showSuggestions(suggestions: List<String>)`
+   - Creates notification with 3 action buttons (copy suggestion 1, 2, 3)
 
-- Add `LlmApiClient.kt` in Android native code:
-  - Use OkHttp/Retrofit to call Gemini or OpenAI API directly from native
-  - Hardcode API key in BuildConfig or gradle.properties for security
-  - Build prompt from chat context: "You are a helpful chat assistant. Given this conversation, suggest 2-3 contextually appropriate replies..."
-  - Parse JSON response and return suggestions list
-- No backend needed; API calls directly from Android service
-- Recommended: Use Gemini API for faster responses and better rate limits
+4. **`AccessibilityBridgeModule.kt`** (60 lines max)
+   - `triggerAnalysis()` - Button press → read screen → get AI → show notification
+   - `isServiceEnabled()` - Check if accessibility is on
+   - `openAccessibilitySettings()` - Open settings page
 
-### 5) Notifications MVP (ship fast)
+**Manifest updates:**
+- Add `POST_NOTIFICATIONS` permission
+- Add accessibility service declaration
+- Add `res/xml/accessibility_service_config.xml` (simple config, WhatsApp only)
 
-- Trigger notification on new incoming/outgoing message events (debounced)
-- Show up to 3 suggestions as actions
-- Action behavior:
-  - Copy: Copy to clipboard; toast
-  - Speak: TTS speak
-  - Reply: Open WhatsApp chat via intent; optionally prefill via clipboard + instructions (WhatsApp restricts auto-send)
+### 3) RN ↔ native bridge (already covered in step 2)
 
-### 6) Phase 2: Overlay bubble (optional)
+Module is already listed above (`AccessibilityBridgeModule.kt`). Just needs to be registered in `MainApplication.kt`
 
-- Add `BubbleService.kt` drawing a small draggable chip using `WindowManager` with `TYPE_APPLICATION_OVERLAY`
-- Tap opens a small view with suggestions; long-press to dismiss
-- Ask for `SYSTEM_ALERT_WINDOW` permission via settings intent
+### 4) Update React Native UI
 
-### 7) App UI polish and states
+Add "Analyze Chat" button in `prota/app/index.tsx`:
+- Calls native `triggerAnalysis()` method
+- Shows loading state while processing
+- That's it!
 
-- `prota/app/index.tsx`:
-  - Status tiles: Accessibility enabled/disabled, Notification permission, Service running/stopped
-  - Buttons: Open Accessibility settings; Request notifications; Start/Stop service; Test notification
-  - Dark theme with modern UI design
+### 5) Testing Flow (Super Simple)
 
-### 8) Hardening
+1. Build dev APK
+2. Enable accessibility service in phone settings
+3. Open WhatsApp chat
+4. Tap "Analyze Chat" button in your app
+5. Wait 2-3 seconds
+6. Notification appears with 3 suggestions
+7. Tap suggestion → copies to clipboard → paste in WhatsApp
 
-- Debounce and rate-limit calls (e.g., min 2-4s between requests per conversation)
-- Handle offline or API errors gracefully with cached last suggestion
-- Battery: Use foreground service only when necessary; otherwise WorkManager
-- Privacy: Process only visible text; never store unless user opts in
-
-### 9) Packaging and demo
-
-- Provide a simple seed script to enable required settings checklist
-- Prepare a test flow video demonstrating WhatsApp conversation suggestions
+**Done! Everything else is optional future enhancements.**
 
 ## Essential Snippets (non-executable sketches)
 
@@ -147,14 +131,12 @@
 - Overlay requires `SYSTEM_ALERT_WINDOW` permission and OEM quirks; notifications are more reliable for MVP.
 - Accessibility features are sensitive per Play policies; keep this as demo-only, not for distribution.
 
-### To-dos
+### To-dos (SIMPLIFIED - Only 6 Tasks!)
 
 - [x] Add settings UI in prota to manage permissions and service control
-- [ ] Run Expo prebuild and confirm Android project structure
-- [ ] Create ChatAssistAccessibilityService with WhatsApp filtering and text extraction
-- [ ] Implement LlmApiClient for direct Gemini/OpenAI calls and caching (with hardcoded API key)
-- [ ] Show heads-up notifications with suggestion actions
-- [ ] Expose native state and settings to RN via bridge module
-- [ ] Debounce/rate-limit suggestion requests per conversation
-- [ ] Implement optional overlay bubble with draw-over-apps permission
-- [ ] Add test hooks and record demo flow
+- [x] Run Expo prebuild and confirm Android project structure
+- [ ] Add dependencies (OkHttp, Gson) to build.gradle
+- [ ] Create 4 Kotlin files: AccessibilityService, LlmApiClient, NotificationHelper, BridgeModule
+- [ ] Update AndroidManifest.xml and add accessibility_service_config.xml
+- [ ] Add "Analyze Chat" button to UI and wire up bridge
+- [ ] Build APK, enable accessibility, test on real device
