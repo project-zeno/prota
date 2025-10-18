@@ -15,7 +15,6 @@ export default function Index() {
   const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isNotificationEnabled, setIsNotificationEnabled] = useState(false);
-  const [isServiceRunning, setIsServiceRunning] = useState(false);
 
   useEffect(() => {
     checkPermissions();
@@ -54,10 +53,11 @@ export default function Index() {
     console.log("Testing notification...");
   };
 
-  const toggleService = () => {
-    // TODO: Start/stop the accessibility service monitoring
-    setIsServiceRunning(!isServiceRunning);
-    console.log("Service toggled:", !isServiceRunning);
+  const analyzeChat = async () => {
+    // TODO: Call native bridge to analyze current WhatsApp chat
+    Alert.alert("Analyzing", "Reading messages and getting AI suggestions...");
+    console.log("Analyzing chat...");
+    // Will call: NativeModules.AccessibilityBridge.triggerAnalysis()
   };
 
   return (
@@ -105,20 +105,6 @@ export default function Index() {
                 </Text>
               </View>
             </View>
-
-            <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>Service Status</Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  isServiceRunning ? styles.statusActive : styles.statusInactive,
-                ]}
-              >
-                <Text style={styles.statusBadgeText}>
-                  {isServiceRunning ? "Running" : "Stopped"}
-                </Text>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -146,22 +132,29 @@ export default function Index() {
           </View>
         </View>
 
+        {/* Main Action */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Action</Text>
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={[styles.primaryButton, styles.analyzeButton]}
+              onPress={analyzeChat}
+            >
+              <Text style={styles.analyzeButtonText}>
+                💬 Analyze Current Chat
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>
+              Open WhatsApp chat first, then tap this button to get AI-powered
+              reply suggestions
+            </Text>
+          </View>
+        </View>
+
         {/* Service Control */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Service Control</Text>
           <View style={styles.card}>
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                isServiceRunning ? styles.stopButton : styles.startButton,
-              ]}
-              onPress={toggleService}
-            >
-              <Text style={styles.primaryButtonText}>
-                {isServiceRunning ? "Stop Service" : "Start Service"}
-              </Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={testNotification}
@@ -175,15 +168,16 @@ export default function Index() {
         <View style={styles.section}>
           <View style={styles.infoCard}>
             <Text style={styles.infoText}>
-              💡 This app monitors WhatsApp conversations and provides AI-powered
-              reply suggestions via notifications.
+              💡 Tap &ldquo;Analyze Current Chat&rdquo; while in WhatsApp to get AI-powered
+              reply suggestions instantly.
             </Text>
             <Text style={styles.infoText}>
-              🚀 Demo app for AI Native OS project. AI suggestions are powered
-              by integrated language models.
+              🚀 Demo app for AI Native OS project. Uses Gemini API for fast
+              suggestions.
             </Text>
             <Text style={styles.infoText}>
-              ⚠️ Requires accessibility permissions to read chat messages.
+              ⚠️ Requires accessibility permission to read visible messages.
+              Enable it in the Permissions section above.
             </Text>
           </View>
         </View>
@@ -276,6 +270,22 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     marginBottom: 12,
+  },
+  analyzeButton: {
+    backgroundColor: "#8b5cf6",
+    padding: 20,
+    marginBottom: 16,
+  },
+  analyzeButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  helperText: {
+    fontSize: 13,
+    color: "#888",
+    lineHeight: 18,
+    textAlign: "center",
   },
   startButton: {
     backgroundColor: "#10b981",
