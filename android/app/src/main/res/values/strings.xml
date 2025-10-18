@@ -3,4 +3,7 @@
   <string name="expo_system_ui_user_interface_style" translatable="false">automatic</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
   <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
+  
+  <!-- Accessibility Service Description -->
+  <string name="accessibility_service_description">Prota Chat Assist reads visible WhatsApp messages to provide AI-powered reply suggestions. Your messages are only sent to the AI API when you tap the "Analyze Chat" button. No automatic tracking or background monitoring.</string>
 </resources>
