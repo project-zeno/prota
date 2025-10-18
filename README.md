@@ -222,15 +222,6 @@ adb logcat | grep -E "ChatAssist|AccessibilityBridge"
 
 ---
 
-## 📈 Performance
-
-- **Screen Reading**: < 500ms
-- **API Call**: 1-3 seconds
-- **Total Flow**: 2-5 seconds
-- **API Rate**: 2-5 requests/minute (typical usage)
-- **Cost**: ~$0.00002 per request (Gemini free tier: 15/min, 1500/day)
-
----
 
 ## 🤝 Contributing
 
@@ -242,25 +233,7 @@ This is an educational/demo project. Feel free to:
 
 ---
 
-## 📄 License
 
-This is a demo/educational project. Use responsibly and respect user privacy.
-
----
-
-## 🎓 What You'll Learn
-
-Building this project teaches:
-- Android Accessibility Services
-- React Native Native Modules
-- Kotlin Coroutines and async programming
-- REST API integration
-- Android Notifications with actions
-- Thread-safe concurrent programming
-- Modern Android app architecture
-- Bridge communication between native and JS
-
----
 
 ## 🔗 Resources
 
@@ -284,7 +257,8 @@ For questions or issues:
 ## ✅ Status
 
 **Current Version**: 1.0.0  
-**Status**: ✅ Production-ready for testing  
+**Status**: should fix some issues in the api prompt and text extraction.
+
 **Last Updated**: October 18, 2025  
 **Recent Fix**: API spam issue resolved (rate limiting implemented)
 
