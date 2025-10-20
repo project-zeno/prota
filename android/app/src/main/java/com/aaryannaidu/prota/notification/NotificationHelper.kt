@@ -9,308 +9,193 @@ import android.content.Intent
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.aaryannaidu.prota.R
 import com.aaryannaidu.prota.MainActivity
 
+/**
+ * Handles all notifications for the AI assistant
+ */
 class NotificationHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "NotificationHelper"
-        
-        // Notification channels
-        private const val CHANNEL_ID = "chat_suggestions_channel"
-        private const val CHANNEL_NAME = "Chat Suggestions"
-        private const val CHANNEL_DESC = "Notifications for AI-generated chat reply suggestions"
-        
-        private const val CONTROL_CHANNEL_ID = "chat_assist_control_channel"
-        private const val CONTROL_CHANNEL_NAME = "Chat Assist Control"
-        private const val CONTROL_CHANNEL_DESC = "Persistent notification with analyze button"
-        
-        // Notification IDs
-        private const val NOTIFICATION_ID = 1001
-        private const val CONTROL_NOTIFICATION_ID = 1000
-        
-        // Actions
-        private const val ACTION_COPY_SUGGESTION = "com.aaryannaidu.prota.COPY_SUGGESTION"
-        private const val ACTION_ANALYZE_NOW = "com.aaryannaidu.prota.ANALYZE_NOW"
-        private const val EXTRA_SUGGESTION_TEXT = "suggestion_text"
-        private const val EXTRA_SUGGESTION_INDEX = "suggestion_index"
+        private const val ACTION_COPY = "com.aaryannaidu.prota.COPY_SUGGESTION"
+        private const val ACTION_ANALYZE = "com.aaryannaidu.prota.ANALYZE_NOW"
+        private const val SCREENSHOT_DELAY_MS = 2500L
     }
 
-    private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val notificationManager = 
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     init {
-        createNotificationChannel()
+        createChannels()
     }
 
     /**
-     * Create notification channels (required for Android 8.0+)
+     * Create notification channels
      */
-    private fun createNotificationChannel() {
+    private fun createChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Suggestions channel (high importance)
-            val suggestionsChannel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
+            // Results channel (high priority)
+            NotificationChannel(
+                "ai_results",
+                "AI Results",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = CHANNEL_DESC
+                description = "AI analysis results"
                 enableVibration(true)
-                setShowBadge(true)
+                notificationManager.createNotificationChannel(this)
             }
-            
-            // Control channel (low importance, persistent)
-            val controlChannel = NotificationChannel(
-                CONTROL_CHANNEL_ID,
-                CONTROL_CHANNEL_NAME,
+
+            // Control channel (low priority, persistent)
+            NotificationChannel(
+                "ai_control",
+                "AI Control",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = CONTROL_CHANNEL_DESC
+                description = "Control notification"
                 enableVibration(false)
-                setShowBadge(false)
+                notificationManager.createNotificationChannel(this)
             }
-            
-            notificationManager.createNotificationChannel(suggestionsChannel)
-            notificationManager.createNotificationChannel(controlChannel)
-            Log.d(TAG, "Notification channels created")
         }
     }
 
     /**
-     * Show notification with 3 suggestions and 3 copy buttons
-     * 
-     * @param suggestions List of exactly 3 suggestion strings
+     * Show AI insights with copy buttons
      */
-    fun showSuggestions(suggestions: List<String>) {
-        if (suggestions.isEmpty()) {
-            Log.w(TAG, "No suggestions to show")
-            return
+    fun showSuggestions(insights: List<String>) {
+        if (insights.isEmpty()) return
+
+        // Take first 3, pad if needed
+        val items = insights.take(3).toMutableList()
+        while (items.size < 3) {
+            items.add("...")
         }
 
-        // Ensure we have exactly 3 suggestions (pad if needed)
-        val finalSuggestions = suggestions.take(3).let { list ->
-            when (list.size) {
-                3 -> list
-                2 -> list + "Thanks!"
-                1 -> list + listOf("Thanks!", "Sounds good!")
-                else -> listOf("Thanks!", "Sounds good!", "Sure!")
-            }
-        }
+        val text = items.mapIndexed { i, s -> "${i + 1}. $s" }.joinToString("\n\n")
 
-        Log.d(TAG, "Showing notification with ${finalSuggestions.size} suggestions")
-
-        // Build notification content (expanded view shows all suggestions)
-        val notificationText = finalSuggestions.mapIndexed { index, suggestion ->
-            "${index + 1}. $suggestion"
-        }.joinToString("\n\n")
-
-        // Intent to open the app when notification is tapped
-        val contentIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val contentPendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            contentIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Build the notification
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher) // App icon
-            .setContentTitle("💬 Chat Reply Suggestions")
-            .setContentText(finalSuggestions[0]) // First suggestion in compact view
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(notificationText)
-                    .setBigContentTitle("💬 Suggested Replies")
-            )
+        val notification = NotificationCompat.Builder(context, "ai_results")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("🤖 AI Insights")
+            .setContentText(items[0])
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setAutoCancel(true) // Dismiss when tapped
-            .setContentIntent(contentPendingIntent)
-            .setVibrate(longArrayOf(0, 250, 250, 250)) // Short vibration pattern
-            // Add 3 action buttons for copying each suggestion
-            .addAction(
-                createCopyAction(finalSuggestions[0], 1, "Copy 1")
-            )
-            .addAction(
-                createCopyAction(finalSuggestions[1], 2, "Copy 2")
-            )
-            .addAction(
-                createCopyAction(finalSuggestions[2], 3, "Copy 3")
-            )
+            .setAutoCancel(true)
+            .setVibrate(longArrayOf(0, 250))
+            .addAction(createCopyAction(items[0], 1))
+            .addAction(createCopyAction(items[1], 2))
+            .addAction(createCopyAction(items[2], 3))
             .build()
 
-        // Show the notification
-        notificationManager.notify(NOTIFICATION_ID, notification)
-        Log.d(TAG, "Notification shown successfully")
+        notificationManager.notify(1001, notification)
     }
 
     /**
-     * Create an action (button) for copying a suggestion
-     */
-    private fun createCopyAction(
-        suggestionText: String,
-        index: Int,
-        buttonLabel: String
-    ): NotificationCompat.Action {
-        val copyIntent = Intent(context, CopySuggestionReceiver::class.java).apply {
-            action = ACTION_COPY_SUGGESTION
-            putExtra(EXTRA_SUGGESTION_TEXT, suggestionText)
-            putExtra(EXTRA_SUGGESTION_INDEX, index)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            index, // Unique request code for each action
-            copyIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        return NotificationCompat.Action.Builder(
-            0, // No icon needed for action buttons
-            buttonLabel,
-            pendingIntent
-        ).build()
-    }
-
-    /**
-     * Dismiss the suggestions notification
-     */
-    fun dismissNotification() {
-        notificationManager.cancel(NOTIFICATION_ID)
-        Log.d(TAG, "Notification dismissed")
-    }
-
-    /**
-     * Show persistent control notification with "Analyze Now" button
-     * This stays visible while the accessibility service is active
+     * Show persistent control notification
      */
     fun showControlNotification() {
-        // Intent to open app when notification is tapped
-        val contentIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val contentPendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            contentIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Intent for "Analyze Now" button
-        val analyzeIntent = Intent(context, AnalyzeNowReceiver::class.java).apply {
-            action = ACTION_ANALYZE_NOW
-        }
-        val analyzePendingIntent = PendingIntent.getBroadcast(
+        val analyzeIntent = PendingIntent.getBroadcast(
             context,
             100,
-            analyzeIntent,
+            Intent(context, AnalyzeReceiver::class.java).apply { action = ACTION_ANALYZE },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Build persistent notification
-        val notification = NotificationCompat.Builder(context, CONTROL_CHANNEL_ID)
+        val notification = NotificationCompat.Builder(context, "ai_control")
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("💬 Prota Chat Assist")
-            .setContentText("Ready to analyze chats")
+            .setContentTitle("🤖 AI Screen Assistant")
+            .setContentText("Ready to analyze")
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true) // Makes it persistent (non-dismissible)
-            .setContentIntent(contentPendingIntent)
-            .addAction(
-                0,
-                "📊 Analyze Chat Now",
-                analyzePendingIntent
-            )
+            .setOngoing(true)
+            .addAction(0, "📸 Analyze", analyzeIntent)
             .build()
 
-        notificationManager.notify(CONTROL_NOTIFICATION_ID, notification)
-        Log.d(TAG, "Control notification shown")
+        notificationManager.notify(1000, notification)
     }
 
-    /**
-     * Dismiss the control notification
-     */
+    fun dismissNotification() {
+        notificationManager.cancel(1001)
+    }
+
     fun dismissControlNotification() {
-        notificationManager.cancel(CONTROL_NOTIFICATION_ID)
-        Log.d(TAG, "Control notification dismissed")
+        notificationManager.cancel(1000)
     }
 
-    /**
-     * BroadcastReceiver to handle copy suggestion actions
-     * This receives the button clicks from the notification
-     */
-    class CopySuggestionReceiver : BroadcastReceiver() {
+    private fun createCopyAction(text: String, index: Int): NotificationCompat.Action {
+        val intent = PendingIntent.getBroadcast(
+            context,
+            index,
+            Intent(context, CopyReceiver::class.java).apply {
+                action = ACTION_COPY
+                putExtra("text", text)
+                putExtra("index", index)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Action.Builder(0, "Copy $index", intent).build()
+    }
+
+    // ========== Broadcast Receivers ==========
+
+    class CopyReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == ACTION_COPY_SUGGESTION) {
-                val suggestionText = intent.getStringExtra(EXTRA_SUGGESTION_TEXT)
-                val suggestionIndex = intent.getIntExtra(EXTRA_SUGGESTION_INDEX, 0)
+            val text = intent.getStringExtra("text") ?: return
+            val index = intent.getIntExtra("index", 0)
 
-                if (!suggestionText.isNullOrEmpty()) {
-                    // Copy to clipboard
-                    copyToClipboard(context, suggestionText, suggestionIndex)
-                    
-                    // Show toast feedback
-                    Toast.makeText(
-                        context,
-                        "📋 Suggestion $suggestionIndex copied!",
-                        Toast.LENGTH_SHORT
-                    ).show()
-
-                    // Dismiss the notification after copying
-                    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    notificationManager.cancel(NOTIFICATION_ID)
-
-                    Log.d(TAG, "Suggestion $suggestionIndex copied: $suggestionText")
-                } else {
-                    Log.e(TAG, "Empty suggestion text received")
-                }
-            }
-        }
-
-        /**
-         * Copy text to system clipboard
-         */
-        private fun copyToClipboard(context: Context, text: String, index: Int) {
+            // Copy to clipboard
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("Chat Suggestion $index", text)
-            clipboard.setPrimaryClip(clip)
+            clipboard.setPrimaryClip(ClipData.newPlainText("AI Insight", text))
+
+            // Show feedback
+            Toast.makeText(context, "📋 Copied!", Toast.LENGTH_SHORT).show()
+
+            // Dismiss notification
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(1001)
         }
     }
 
-    /**
-     * BroadcastReceiver to handle "Analyze Now" button clicks from control notification
-     */
-    class AnalyzeNowReceiver : BroadcastReceiver() {
+    class AnalyzeReceiver : BroadcastReceiver() {
         companion object {
             @Volatile
-            private var lastClickTime = 0L
-            private const val MIN_CLICK_INTERVAL_MS = 2000L // 2 seconds between clicks
+            private var lastClick = 0L
         }
-        
+
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == ACTION_ANALYZE_NOW) {
-                // Prevent rapid repeated clicks
-                val currentTime = System.currentTimeMillis()
-                if (currentTime - lastClickTime < MIN_CLICK_INTERVAL_MS) {
-                    Log.w(TAG, "Analyze Now clicked too soon, ignoring (debouncing)")
-                    return
-                }
-                lastClickTime = currentTime
-                
-                Log.d(TAG, "Analyze Now button clicked from notification")
-                
-                // Trigger analysis through the bridge module
-                val analysisIntent = Intent(ACTION_ANALYZE_NOW).apply {
-                    setPackage(context.packageName)
-                }
-                context.sendBroadcast(analysisIntent)
+            // Debounce
+            val now = System.currentTimeMillis()
+            if (now - lastClick < 5000) {
+                Toast.makeText(context, "⏳ Please wait...", Toast.LENGTH_SHORT).show()
+                return
             }
+            lastClick = now
+
+            // Collapse notification panel
+            try {
+                context.sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to collapse panel: ${e.message}")
+            }
+
+            // Show countdown
+            Toast.makeText(
+                context,
+                "📸 Analyzing in ${SCREENSHOT_DELAY_MS / 1000} seconds...",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            // Wait then trigger
+            Handler(Looper.getMainLooper()).postDelayed({
+                context.sendBroadcast(Intent(ACTION_ANALYZE).apply {
+                    setPackage(context.packageName)
+                })
+            }, SCREENSHOT_DELAY_MS)
         }
     }
 }
-
