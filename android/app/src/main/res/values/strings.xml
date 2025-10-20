@@ -5,5 +5,5 @@
   <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
   
   <!-- Accessibility Service Description -->
-  <string name="accessibility_service_description">Prota Chat Assist reads visible WhatsApp messages to provide AI-powered reply suggestions. Your messages are only sent to the AI API when you tap the "Analyze Chat" button. No automatic tracking or background monitoring.</string>
+  <string name="accessibility_service_description">Prota AI Screen Assistant captures screenshots to provide AI-powered insights about any app screen. Screenshots are only taken when you tap the "Analyze Screen" button. No automatic tracking or background monitoring. Works with any app.</string>
 </resources>
