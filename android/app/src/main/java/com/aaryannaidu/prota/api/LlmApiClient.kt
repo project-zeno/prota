@@ -38,7 +38,7 @@ class LlmApiClient {
      */
     fun analyzeScreenshot(
         screenshotBase64: String,
-        prompt: String = "Analyze this screen and provide 3 helpful insights or suggestions."
+        prompt: String = "you are a chat assistant and you are an expert at analyzing android app screens.  You are given a screenshot of an android app screen and you need to analyze it and provide 3 helpful insights or suggestions."
     ): List<String> {
         
         if (screenshotBase64.isEmpty()) {
@@ -73,14 +73,29 @@ class LlmApiClient {
     }
 
     /**
-     * Build HTTP request for Gemini API
+     * Build HTTP request for Gemini API with JSON response format
      */
     private fun buildRequest(screenshotBase64: String, prompt: String): Request {
+        val jsonPrompt = """
+            $prompt
+
+            Respond with a valid JSON object in this exact format:
+            {
+              "insights": [
+                "First insight",
+                "Second insight",
+                "Third insight"
+              ]
+            }
+
+            Make sure the response is valid JSON and contains exactly 3 insights.
+        """.trimIndent()
+
         val requestBody = GeminiRequest(
             contents = listOf(
                 Content(
                     parts = listOf(
-                        Part(text = prompt),
+                        Part(text = jsonPrompt),
                         Part(inlineData = InlineData(
                             mimeType = "image/jpeg",
                             data = screenshotBase64
@@ -90,7 +105,8 @@ class LlmApiClient {
             ),
             generationConfig = GenerationConfig(
                 temperature = 0.7,
-                maxOutputTokens = 500
+                maxOutputTokens = 1000,
+                responseMimeType = "application/json"
             )
         )
 
@@ -106,11 +122,11 @@ class LlmApiClient {
     }
 
     /**
-     * Extract insights from AI response
-     * Simple: just split by lines and take first 3 non-empty ones
+     * Extract insights from AI JSON response
+     * Parse the structured JSON response instead of text splitting
      */
     private fun extractInsights(response: GeminiResponse): List<String> {
-        val text = response.candidates
+        val jsonText = response.candidates
             ?.firstOrNull()
             ?.content
             ?.parts
@@ -118,28 +134,27 @@ class LlmApiClient {
             ?.text
             ?: return listOf("No response from AI")
 
-        // Split by lines, clean up, take first 3
-        val insights = text.split("\n")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .map { cleanLine(it) } // Remove "1.", "•", etc.
-            .take(3)
+        try {
+            // Parse the JSON response
+            val jsonResponse = gson.fromJson(jsonText, JsonResponse::class.java)
 
-        return if (insights.isEmpty()) {
-            listOf("No insights generated")
-        } else {
-            insights
+            // Extract insights from the structured response
+            val insights = jsonResponse.insights ?: emptyList()
+
+            return if (insights.isEmpty()) {
+                listOf("No insights generated")
+            } else {
+                // Take up to 3 insights and ensure they're clean
+                insights.take(3).map { it.trim() }.filter { it.isNotEmpty() }
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse JSON response: ${e.message}")
+            Log.e(TAG, "Raw response: $jsonText")
+
+            // Return error message if JSON parsing fails
+            return listOf("Failed to parse AI response", "Please try again", "Check logs for details")
         }
-    }
-
-    /**
-     * Remove numbering/bullets from lines (1., •, -, etc.)
-     */
-    private fun cleanLine(line: String): String {
-        return line
-            .replaceFirst(Regex("^[0-9]+[.)\\s]+"), "") // Remove "1. " or "1) "
-            .replaceFirst(Regex("^[•\\-*]\\s+"), "")    // Remove "• " or "- "
-            .trim()
     }
 
     // ========== Data Classes ==========
@@ -165,7 +180,15 @@ class LlmApiClient {
 
     data class GenerationConfig(
         @SerializedName("temperature") val temperature: Double,
-        @SerializedName("maxOutputTokens") val maxOutputTokens: Int
+        @SerializedName("maxOutputTokens") val maxOutputTokens: Int,
+        @SerializedName("responseMimeType") val responseMimeType: String? = null
+    )
+
+    /**
+     * Data class for parsing the structured JSON response from Gemini
+     */
+    data class JsonResponse(
+        @SerializedName("insights") val insights: List<String>?
     )
 
     data class GeminiResponse(
