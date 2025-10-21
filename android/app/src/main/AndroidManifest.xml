@@ -35,12 +35,12 @@
       </intent-filter>
     </activity>
     
-    <!-- Accessibility Service for reading WhatsApp messages -->
+    <!-- Accessibility Service for AI screen analysis -->
     <service
-      android:name=".accessibility.ChatAssistAccessibilityService"
+      android:name=".accessibility.AIAssistAccessibilityService"
       android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
       android:exported="false"
-      android:label="Prota Chat Assist">
+      android:label="Prota AI Screen Assistant">
       <intent-filter>
         <action android:name="android.accessibilityservice.AccessibilityService"/>
       </intent-filter>
@@ -49,18 +49,17 @@
         android:resource="@xml/accessibility_service_config"/>
     </service>
     
-    <!-- Broadcast Receiver for notification copy actions -->
+    <!-- Broadcast Receivers -->
     <receiver
-      android:name=".notification.NotificationHelper$CopySuggestionReceiver"
+      android:name=".notification.NotificationHelper$CopyReceiver"
       android:exported="false">
       <intent-filter>
         <action android:name="com.aaryannaidu.prota.COPY_SUGGESTION"/>
       </intent-filter>
     </receiver>
     
-    <!-- Broadcast Receiver for analyze now action -->
     <receiver
-      android:name=".notification.NotificationHelper$AnalyzeNowReceiver"
+      android:name=".notification.NotificationHelper$AnalyzeReceiver"
       android:exported="false">
       <intent-filter>
         <action android:name="com.aaryannaidu.prota.ANALYZE_NOW"/>
