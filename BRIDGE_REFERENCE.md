@@ -45,8 +45,9 @@ try {
 **What it does:**
 1. Checks if accessibility service is enabled
 2. Captures screenshot of current screen (JPEG compressed)
-3. Sends to Gemini API with prompt: "Analyze this screen and provide 3 helpful insights or suggestions."
-4. Shows notification with 3 AI-generated insights
+3. Sends to Gemini API requesting JSON response format
+4. Parses structured JSON response with 3 insights
+5. Shows notification with AI-generated insights
 
 ---
 

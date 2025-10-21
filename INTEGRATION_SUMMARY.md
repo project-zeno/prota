@@ -67,9 +67,9 @@ prota/
 - **JPEG compression** (200KB vs 8MB raw)
 
 ### **🤖 AI Integration**
-- **Gemini 2.5 Flash Lite** (fast, cheap)
+- **Gemini 2.5 Flash Lite** with JSON mode (structured responses)
 - **Custom prompts** supported
-- **3 insights per analysis**
+- **3 insights per analysis** (structured JSON parsing)
 
 ### **🔔 Smart Notifications**
 - **Persistent control** notification with "Analyze" button
