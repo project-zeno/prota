@@ -30,7 +30,7 @@ Prota is a React Native (Expo) app that provides **universal AI screen analysis*
 
 ```bash
 # 1. Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/project-zeno/prota
 cd prota
 
 # 2. Install dependencies
