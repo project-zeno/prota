@@ -5,5 +5,5 @@
   <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
   
   <!-- Accessibility Service Description -->
-  <string name="accessibility_service_description">Prota AI Screen Assistant captures screenshots to provide AI-powered insights about any app screen. Screenshots are only taken when you tap the "Analyze Screen" button. No automatic tracking or background monitoring. Works with any app.</string>
+  <string name="accessibility_service_description">Prota Screen Assist captures screenshots from any app to provide AI-powered insights and suggestions. Content is only sent to the AI API when you tap the "Analyze Screen" button. No automatic tracking or background monitoring.</string>
 </resources>

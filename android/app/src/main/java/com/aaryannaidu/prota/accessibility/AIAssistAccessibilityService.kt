@@ -143,3 +143,4 @@ class AIAssistAccessibilityService : AccessibilityService() {
         return Base64.encodeToString(bytes, Base64.NO_WRAP)
     }
 }
+

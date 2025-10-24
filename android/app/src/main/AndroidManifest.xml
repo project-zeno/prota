@@ -12,8 +12,6 @@
       <category android:name="android.intent.category.BROWSABLE"/>
       <data android:scheme="https"/>
     </intent>
-    <!-- Query for WhatsApp -->
-    <package android:name="com.whatsapp"/>
   </queries>
   
   <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false">
@@ -49,17 +47,18 @@
         android:resource="@xml/accessibility_service_config"/>
     </service>
     
-    <!-- Broadcast Receivers -->
+    <!-- Broadcast Receiver for notification copy actions -->
     <receiver
-      android:name=".notification.NotificationHelper$CopyReceiver"
+      android:name=".notification.NotificationHelper$CopySuggestionReceiver"
       android:exported="false">
       <intent-filter>
         <action android:name="com.aaryannaidu.prota.COPY_SUGGESTION"/>
       </intent-filter>
     </receiver>
     
+    <!-- Broadcast Receiver for analyze now action -->
     <receiver
-      android:name=".notification.NotificationHelper$AnalyzeReceiver"
+      android:name=".notification.NotificationHelper$AnalyzeNowReceiver"
       android:exported="false">
       <intent-filter>
         <action android:name="com.aaryannaidu.prota.ANALYZE_NOW"/>

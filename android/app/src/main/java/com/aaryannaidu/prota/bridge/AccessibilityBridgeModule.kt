@@ -14,6 +14,7 @@ import com.aaryannaidu.prota.accessibility.AIAssistAccessibilityService
 import com.aaryannaidu.prota.api.LlmApiClient
 import com.aaryannaidu.prota.notification.NotificationHelper
 import kotlinx.coroutines.*
+import kotlin.coroutines.resume
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -95,8 +96,10 @@ class AccessibilityBridgeModule(reactContext: ReactApplicationContext) :
             try {
                 // Capture screenshot
                 val screenshot = withContext(Dispatchers.Main) {
-                    suspendCoroutine<String?> { continuation ->
-                        service.captureScreenshot { continuation.resume(it) }
+                    suspendCancellableCoroutine<String?> { continuation ->
+                        service.captureScreenshot { result ->
+                            continuation.resume(result)
+                        }
                     }
                 }
 
