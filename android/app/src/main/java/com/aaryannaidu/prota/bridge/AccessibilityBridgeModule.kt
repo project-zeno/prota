@@ -109,8 +109,8 @@ class AccessibilityBridgeModule(reactContext: ReactApplicationContext) :
                 }
 
                 // Get AI insights
-                val insights = withContext(Dispatchers.IO) {
-                    llmClient.analyzeScreenshot(screenshot, prompt)
+                val insights = withContext<List<String>>(Dispatchers.IO) {
+                    llmClient.getSuggestions(screenshot)
                 }
 
                 if (insights.isEmpty()) {
@@ -126,10 +126,12 @@ class AccessibilityBridgeModule(reactContext: ReactApplicationContext) :
                 // Return result to React Native
                 promise?.resolve(Arguments.createMap().apply {
                     putString("status", "success")
-                    putArray("insights", Arguments.createArray().apply {
-                        insights.forEach { pushString(it) }
-                    })
-                })
+                    putArray(
+                        "insights",
+                        Arguments.createArray().apply {
+                            insights.forEach { insight -> pushString(insight) }
+                        }
+                    )
 
             } catch (e: Exception) {
                 Log.e(TAG, "Analysis error: ${e.message}")
