@@ -134,11 +134,12 @@ class AIAssistAccessibilityService : AccessibilityService() {
 
     /**
      * Convert bitmap to base64 string
-     * Compresses to JPEG at 80% quality to reduce size
+     * Compresses to JPEG at 60% quality to reduce size
+     * Vision models don't need high quality for understanding UI
      */
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
         val bytes = outputStream.toByteArray()
         return Base64.encodeToString(bytes, Base64.NO_WRAP)
     }

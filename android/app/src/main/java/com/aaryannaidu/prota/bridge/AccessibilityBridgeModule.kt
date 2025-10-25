@@ -111,7 +111,7 @@ class AccessibilityBridgeModule(reactContext: ReactApplicationContext) :
 
                 // Get AI insights
                 val insights = withContext<List<String>>(Dispatchers.IO) {
-                    llmClient.getSuggestions(screenshot)
+                    llmClient.analyzeScreenshot(screenshot, prompt)
                 }
 
                 if (insights.isEmpty()) {
