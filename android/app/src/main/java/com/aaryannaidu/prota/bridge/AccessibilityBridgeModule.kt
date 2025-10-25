@@ -16,6 +16,7 @@ import com.aaryannaidu.prota.notification.NotificationHelper
 import kotlinx.coroutines.*
 import kotlin.coroutines.resume
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * Bridge between React Native and Android accessibility service
@@ -132,6 +133,7 @@ class AccessibilityBridgeModule(reactContext: ReactApplicationContext) :
                             insights.forEach { insight -> pushString(insight) }
                         }
                     )
+                })
 
             } catch (e: Exception) {
                 Log.e(TAG, "Analysis error: ${e.message}")
