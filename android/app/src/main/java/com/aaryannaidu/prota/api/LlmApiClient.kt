@@ -39,7 +39,7 @@ class LlmApiClient {
      */
     fun analyzeScreenshot(
         screenshotBase64: String,
-        prompt: String = "You are a helpful chat assistant. From this screenshot of a messaging app, read the conversation, infer the context and tone, and suggest 3 natural replies. Use the same language as the conversation, keep each under 20 words, and avoid placeholders."
+        prompt: String = "You are a personal assistant for a user. From this screenshot of a messaging app, read the conversation, infer the context and tone, and suggest 3 natural replies. Use the same language as the conversation, keep each under 10 words, and avoid placeholders."
     ): List<String> {
         
         if (screenshotBase64.isEmpty()) {
