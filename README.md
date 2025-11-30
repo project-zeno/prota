@@ -2,6 +2,7 @@
 
 AI-powered screen analysis for any Android app using screenshots and Gemini AI.
 
+Before running the app, make sure to add your Gemini API key to the `LlmApiClient.kt` file.
 ---
 
 ## 📖 Project Overview

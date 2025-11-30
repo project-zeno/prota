@@ -18,7 +18,7 @@ class LlmApiClient {
 
     companion object {
         private const val TAG = "LlmApiClient"
-        private const val API_KEY = "AIzaSyD04A_EGELtGfydagu0ceZjH6xqPjiLHLU"
+        private const val API_KEY = "Your gemini API Key"
         // Using Gemini 2.5 Flash Lite - supports vision and is fast/cheap
         private const val MODEL = "gemini-2.5-flash-lite"
         private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
